@@ -1,0 +1,66 @@
+import java.util.*;
+import java.util.concurrent.*;
+public class Main4 {
+    static class Question {
+        String question;
+        String[] options;
+        int correctAnswerIndex;
+
+        Question(String q, String[] opts, int correctIndex) {
+            question = q;
+            options = opts;
+            correctAnswerIndex = correctIndex;
+        }}
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        List<Question> quiz = Arrays.asList(
+            new Question("How many bones are present in the Human Body?", new String[]{"205", "206", "200", "204"}, 1),
+            new Question("What is the chemical formula of water?", new String[]{"HO", "H2O2", "H2O", "H30"}, 2));
+        int score = 0;
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        for (int i = 0; i < quiz.size(); i++) {
+            Question q = quiz.get(i);
+            System.out.println(q.question);
+            for (int j = 0; j < q.options.length; j++) {
+                System.out.println((j + 1) + ". " + q.options[j]);
+            }
+            Future<Integer> future = executor.submit(() -> {
+                while (true) {
+                    try {
+                        System.out.print("Select option (1-4): ");
+                        int input = scanner.nextInt();
+                        if (input < 1 || input > 4) {
+                            System.out.println("Invalid option. Please choose between 1 and 4.");
+                        } else {
+                            return input - 1;
+                        }
+                    } catch (InputMismatchException e) {
+                        System.out.println("Invalid input. Please enter a number between 1 and 4.");
+                        scanner.next(); 
+        }}});
+            try {
+                int answer = future.get(10, TimeUnit.SECONDS);
+                if (answer == q.correctAnswerIndex) {
+                    System.out.println("Correct!");
+                    score++;
+                } else {
+                    System.out.println("Incorrect!");
+                }
+            } catch (TimeoutException e) {
+                System.out.println("Time is up!");
+                future.cancel(true); 
+            } catch (ExecutionException | InterruptedException e) {
+                System.out.println("An error occurred while processing your input. Skipping question.");
+                future.cancel(true);
+            }}
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(1, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+        }
+        scanner.close();
+        System.out.println("Your score: " + score + "/" + quiz.size());
+    }}
